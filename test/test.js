@@ -118,7 +118,7 @@ describe('LFUCache-O(1) time', function () {
     assert.equal(cache.get('d'), '4');
   });
   
-  it('FrequencyBlock link should be right', function() {
+  it('should check FrequencyBlock prototype', function() {
     const cache = new LFUCache(4);
     cache.put('a', '1');
     cache.put('b', '2');
