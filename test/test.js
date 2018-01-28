@@ -33,6 +33,23 @@ describe('LFUCache-O(1) time', function () {
     assert.equal(cache.get('a'), '1');
   });
   
+  it('should keep frequency but change cached value', function () {
+    const cache = new LFUCache(3);
+    cache.put('a', '1');
+    cache.put('b', '2');
+    cache.put('c', '3');
+  
+    cache.get('a'); cache.get('a'); cache.get('a');
+    cache.put('a', '11');
+    cache.put('d', '4');
+    
+    assert.equal(cache.get('a'), '11');
+    assert.equal(cache.get('b'), -1);
+    assert.equal(cache.get('c'), '3');
+    assert.equal(cache.get('d'), '4');
+    
+  });
+  
   it('should not keep more than maxItems', function () {
     const cache = new LFUCache(2);
     cache.put('a', '1');
