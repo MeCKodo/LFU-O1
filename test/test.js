@@ -29,7 +29,7 @@ describe('LFUCache-O(1) time', function () {
   it('should capacity > 0', function () {
     const cache = new LFUCache(0);
     cache.put(0, 0);
-    assert.equal(cache.get(0), 0);
+    assert.equal(cache.get(0), -1);
   });
   
   it('should return cached value', function () {

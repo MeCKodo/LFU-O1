@@ -23,12 +23,15 @@ class FrequencyBlock {
   addNode(Node) {
     if (this.length === 0) { // 该频率下还没有node
       this.nodeMap[Node.key] = Node;
+      Node.pre = Node.next = null;
       this.head = this.tail = Node;
     } else {
       const preNode = this.head;
       this.head = Node;
       Node.pre = preNode;
+      // if (preNode.next) {
       preNode.next = Node;
+      // }
       if (!preNode.pre) {
         this.tail = preNode;
       }
@@ -38,7 +41,7 @@ class FrequencyBlock {
   }
   
   removeNode(Node) {
-    const { pre, next, key } = Node;
+    const {pre, next, key} = Node;
     if (pre) {
       pre.next = next;
     }
@@ -89,7 +92,16 @@ class LFUCache {
       return;
     }
     if (this.cache[key]) {
-      this.cache[key].value = value;
+      const cacheNode = this.cache[key];
+      cacheNode.value = value;
+      if (cacheNode.pre) {
+        cacheNode.pre.next = cacheNode.next;
+      }
+      if (cacheNode.next) {
+        cacheNode.next.pre = cacheNode.pre;
+      }
+      this.head.head.next = cacheNode;
+      cacheNode.pre = this.head.head;
       return;
     }
     // 满了
@@ -129,35 +141,38 @@ class LFUCache {
   get(key) {
     let FBlock;
     if (!this.capacity) {
-      return 0;
+      return -1;
     }
     const node = this.cache[key];
     if (!node) return -1;
     
     let nodeCurrentFBlock = node.currentFBlock;
-    const { next, frequency: currentFrequency } = nodeCurrentFBlock;
+    const {next, frequency: currentFrequency} = nodeCurrentFBlock;
     
     if (next) {
       // Block 是否连续，连续直接取next，否则新建下一个Block
+      // console.log((next.frequency > currentFrequency + 1), '---(next.frequency > currentFrequency + 1)');
       FBlock = (next.frequency > currentFrequency + 1) ?
         new FrequencyBlock(currentFrequency + 1) :
         next;
     } else {
       FBlock = new FrequencyBlock(currentFrequency + 1);
     }
-    
+    // console.log(nodeCurrentFBlock, '------current', FBlock, '---------FBlock', key, '------ key');
     nodeCurrentFBlock.removeNode(node); // 上一个Block 删除 node
     this.removeFBlock(nodeCurrentFBlock, FBlock);
     
-    node.currentFBlock = FBlock; // node重新引用新的Block
-    node.currentFBlock.addNode(node);
-    if (this.head.frequency < node.currentFBlock.frequency) { // head指向最高频率的Block
-      this.head = node.currentFBlock;
+    if (this.head.frequency < FBlock.frequency) { // head指向最高频率的Block
+      this.head = FBlock;
     } else {
-      if (node.currentFBlock.frequency > this.head.pre.frequency) {
-        this.head.pre = node.currentFBlock;
+      if (FBlock.frequency > (this.head.pre && this.head.pre.frequency + 1)) {
+        this.head.pre = FBlock;
       }
     }
+    
+    node.currentFBlock = FBlock; // node重新引用新的Block
+    node.pre = node.next = null;
+    node.currentFBlock.addNode(node);
     
     if (this.tail === this.head) {
       this.tail.pre = this.tail.next = this.head.pre = this.head.next = null;
@@ -167,29 +182,34 @@ class LFUCache {
   }
   
   removeFBlock(nodeCurrentFBlock, FBlock) {
-    const { next, pre, length } = nodeCurrentFBlock;
-    if (next) {
-      FBlock.next = next;
-      next.pre = FBlock;
-    }
+    const {next, pre, length} = nodeCurrentFBlock;
     if (length === 0) {
       if (this.tail.frequency === nodeCurrentFBlock.frequency) {
         this.tail = FBlock;
       }
-      
       if (pre) {
         FBlock.pre = pre;
         pre.next = FBlock;
       }
-      
+      if (next) {
+        FBlock.next = next;
+        next.pre = FBlock;
+      }
       nodeCurrentFBlock.destroy();
     } else {
+      if (next === FBlock) return; // 下一个就是要插入的，不用修改pre和next
+      
+      if (next && next !== FBlock) {
+        FBlock.next = next;
+        next.pre = FBlock;
+      }
       nodeCurrentFBlock.next = FBlock;
       FBlock.pre = nodeCurrentFBlock;
     }
   }
   
   evict() {
+    // console.log(this.tail);
     Reflect.deleteProperty(this.cache, this.tail.tail.key);
     this.tail.removeNode(this.tail.tail);
     if (this.tail.length === 0) {
@@ -197,8 +217,107 @@ class LFUCache {
       this.tail.destroy();
       this.tail = next;
     }
+    
     this.length -= 1;
   }
 }
 
 module.exports = LFUCache;
+/*
+
+var cache = new LFUCache(10);
+
+cache.put(3, 17);
+cache.put(6, 11);
+cache.put(10, 5);
+
+cache.put(2, 19);
+cache.get(2);
+cache.get(3);
+cache.put(5, 5);
+cache.put(1, 30);
+cache.put(9, 12);
+// cache.get(7);
+
+cache.get(5);
+cache.get(8);
+cache.get(9);
+cache.put(4, 30);
+cache.put(9, 3);
+cache.get(9); // error
+cache.get(10);
+cache.get(10);
+cache.put(6, 14);
+cache.put(3, 1); // ok
+
+cache.get(3);
+cache.put(10, 11);
+cache.get(8);
+cache.put(2, 14);
+cache.get(1);
+cache.get(5);
+cache.get(4);
+cache.put(11, 4);
+cache.put(12, 24);
+cache.put(5, 18);
+cache.get(13);
+cache.put(7, 23);
+cache.get(8);
+cache.get(12);
+
+cache.put(3, 27);
+cache.put(2, 12);
+cache.get(5);
+cache.put(2, 9);
+cache.put(13, 4);
+cache.put(8, 18);
+cache.put(1, 7);
+cache.get(6);
+cache.put(9, 29);
+cache.put(8, 21);
+cache.get(5);
+cache.put(6, 30);
+cache.put(1, 12);
+
+cache.get(10);
+cache.put(4, 15);
+cache.put(7, 22);
+cache.put(11, 26);
+cache.put(8, 17);
+cache.put(9, 29);
+cache.get(5);
+cache.put(3, 4);
+cache.put(11, 30);
+cache.get(12);
+cache.put(4, 29);
+cache.get(3);
+cache.get(9);
+
+cache.get(6);
+cache.put(3, 4);
+cache.get(1);
+cache.get(10);
+cache.put(3, 29);
+cache.put(10, 28);
+cache.put(1, 20);
+cache.put(11, 13);
+cache.get(3);
+cache.put(3, 12);
+cache.put(3, 8);
+cache.put(10, 9);
+cache.put(3, 26);
+
+cache.get(8);
+cache.get(7);
+cache.get(5);
+cache.put(13, 17);
+cache.put(2, 27);
+cache.put(11, 15);
+cache.get(12);
+cache.put(9, 19);
+cache.put(2, 15);
+cache.put(3, 16);
+cache.get(1);
+cache.put(12, 17);
+cache.put(9, 1);
+*/
