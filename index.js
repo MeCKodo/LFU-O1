@@ -70,6 +70,12 @@ class FrequencyBlock {
 
 class LFUCache {
   constructor(capacity) {
+    if (!(Object.prototype.toString.call(capacity) === '[object Number]')) {
+      throw TypeError('capacity must be number');
+    }
+    if (capacity === 0) {
+      console.error('please input capacity > 0');
+    }
     this.capacity = capacity;
     this.head = null;
     this.tail = null;
@@ -79,6 +85,9 @@ class LFUCache {
   
   put(key, value) {
     let node;
+    if (!this.capacity) {
+      return;
+    }
     if (this.cache[key]) {
       this.cache[key].value = value;
       return;
@@ -119,6 +128,9 @@ class LFUCache {
   
   get(key) {
     let FBlock;
+    if (!this.capacity) {
+      return 0;
+    }
     const node = this.cache[key];
     if (!node) return -1;
     
