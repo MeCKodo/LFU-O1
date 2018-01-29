@@ -21,17 +21,15 @@ class FrequencyBlock {
   }
   
   addNode(Node) {
+    Node.pre = Node.next = null;
     if (this.length === 0) { // 该频率下还没有node
       this.nodeMap[Node.key] = Node;
-      Node.pre = Node.next = null;
       this.head = this.tail = Node;
     } else {
       const preNode = this.head;
       this.head = Node;
       Node.pre = preNode;
-      // if (preNode.next) {
       preNode.next = Node;
-      // }
       if (!preNode.pre) {
         this.tail = preNode;
       }
@@ -48,7 +46,7 @@ class FrequencyBlock {
     if (next) {
       next.pre = pre;
     }
-    if (this.tail === Node) { // 当前会被删掉，tail指向下一个Node
+    if (this.tail === Node) { // 当前tail会被删掉，tail指向下一个Node
       this.tail = next;
     }
     // 删除得是头节点，并且该Block不止1个节点，head前移
@@ -76,7 +74,7 @@ class LFUCache {
     if (!(Object.prototype.toString.call(capacity) === '[object Number]')) {
       throw TypeError('capacity must be number');
     }
-    if (capacity === 0) {
+    if (capacity <= 0) {
       console.error('please input capacity > 0');
     }
     this.capacity = capacity;
@@ -88,23 +86,14 @@ class LFUCache {
   
   put(key, value) {
     let node;
-    if (!this.capacity) {
+    if (this.capacity <= 0) {
       return;
     }
     if (this.cache[key]) {
-      const cacheNode = this.cache[key];
-      cacheNode.value = value;
-      if (cacheNode.pre) {
-        cacheNode.pre.next = cacheNode.next;
-      }
-      if (cacheNode.next) {
-        cacheNode.next.pre = cacheNode.pre;
-      }
-      this.head.head.next = cacheNode;
-      cacheNode.pre = this.head.head;
+      this.resetKey(key, value);
       return;
     }
-    // 满了
+    
     if (this.length === this.capacity) {
       this.evict();
     }
@@ -151,14 +140,13 @@ class LFUCache {
     
     if (next) {
       // Block 是否连续，连续直接取next，否则新建下一个Block
-      // console.log((next.frequency > currentFrequency + 1), '---(next.frequency > currentFrequency + 1)');
       FBlock = (next.frequency > currentFrequency + 1) ?
         new FrequencyBlock(currentFrequency + 1) :
         next;
     } else {
       FBlock = new FrequencyBlock(currentFrequency + 1);
     }
-    // console.log(nodeCurrentFBlock, '------current', FBlock, '---------FBlock', key, '------ key');
+    
     nodeCurrentFBlock.removeNode(node); // 上一个Block 删除 node
     this.removeFBlock(nodeCurrentFBlock, FBlock);
     
@@ -179,6 +167,29 @@ class LFUCache {
     }
     
     return node.value;
+  }
+  
+  // 重置Key的时候，当前key在该频率下需要变为head
+  resetKey(key, value) {
+    const cacheNode = this.cache[key];
+    cacheNode.value = value;
+    let { currentFBlock, pre, next } = cacheNode;
+    if (currentFBlock.length <= 1 || cacheNode === currentFBlock.head) {
+      return;
+    }
+    if (cacheNode === currentFBlock.tail) {
+      currentFBlock.tail = next;
+    }
+    if (pre) {
+      pre.next = next;
+    }
+    if (next) {
+      next.pre = pre;
+    }
+    currentFBlock.head.next = cacheNode;
+    cacheNode.pre = currentFBlock.head;
+    cacheNode.next = null;
+    currentFBlock.head = cacheNode;
   }
   
   removeFBlock(nodeCurrentFBlock, FBlock) {
