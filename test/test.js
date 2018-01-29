@@ -143,14 +143,14 @@ describe('LFUCache-O(1) time', function () {
   
   it('should check FrequencyBlock prototype', function() {
     const cache = new LFUCache(4);
-    cache.put('a', '1');
-    cache.put('b', '2');
-    cache.put('c', '3');
-    cache.put('d', '4');
+    cache.put(1, 1);
+    cache.put(2, 2);
+    cache.put(3, 3);
+    cache.put(4, 4);
     
-    cache.get('a'); cache.get('a'); cache.get('a');
-    cache.get('b'); cache.get('b');
-    cache.get('c');
+    cache.get(1); cache.get(1); cache.get(1);
+    cache.get(2); cache.get(2);
+    cache.get(3);
   
     assert.equal(cache.tail.frequency, 0);
     assert.equal(cache.head.frequency, 3);
