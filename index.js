@@ -16,14 +16,15 @@ class FrequencyBlock {
     this.next = null;
     this.pre = null;
     
-    this.nodeMap = {};
+    this.nodeMap = new Map();
     this.length = 0;
   }
   
   addNode(Node) {
     Node.pre = Node.next = null;
     if (this.length === 0) { // 该频率下还没有node
-      this.nodeMap[Node.key] = Node;
+      // this.nodeMap[Node.key] = Node;
+      this.nodeMap.set(Node.key, Node);
       this.head = this.tail = Node;
     } else {
       const preNode = this.head;
@@ -33,7 +34,8 @@ class FrequencyBlock {
       if (!preNode.pre) {
         this.tail = preNode;
       }
-      this.nodeMap[Node.key] = Node;
+      // this.nodeMap[Node.key] = Node;
+      this.nodeMap.set(Node.key, Node);
     }
     this.length += 1;
   }
@@ -53,7 +55,8 @@ class FrequencyBlock {
     if (this.head === Node && this.head !== this.tail) {
       this.head = pre;
     }
-    Reflect.deleteProperty(this.nodeMap, key);
+    // Reflect.deleteProperty(this.nodeMap, key);
+    this.nodeMap.delete(key);
     this.length -= 1;
   }
   
@@ -74,13 +77,13 @@ class LFUCache {
     if (!(Object.prototype.toString.call(capacity) === '[object Number]')) {
       throw TypeError('capacity must be number');
     }
-    if (capacity <= 0) {
+    if (capacity === 0) {
       console.error('please input capacity > 0');
     }
     this.capacity = capacity;
     this.head = null;
     this.tail = null;
-    this.cache = {};
+    this.cache = new Map();
     this.length = 0;
   }
   
@@ -89,7 +92,7 @@ class LFUCache {
     if (this.capacity <= 0) {
       return;
     }
-    if (this.cache[key]) {
+    if (this.cache.get(key)) {
       this.resetKey(key, value);
       return;
     }
@@ -123,7 +126,8 @@ class LFUCache {
       }
     }
     
-    this.cache[key] = node;
+    // this.cache[key] = node;
+    this.cache.set(key, node);
     this.length += 1;
   }
   
@@ -132,7 +136,7 @@ class LFUCache {
     if (!this.capacity) {
       return -1;
     }
-    const node = this.cache[key];
+    const node = this.cache.get(key);
     if (!node) return -1;
     
     let nodeCurrentFBlock = node.currentFBlock;
@@ -140,13 +144,14 @@ class LFUCache {
     
     if (next) {
       // Block 是否连续，连续直接取next，否则新建下一个Block
+      // console.log((next.frequency > currentFrequency + 1), '---(next.frequency > currentFrequency + 1)');
       FBlock = (next.frequency > currentFrequency + 1) ?
         new FrequencyBlock(currentFrequency + 1) :
         next;
     } else {
       FBlock = new FrequencyBlock(currentFrequency + 1);
     }
-    
+    // console.log(nodeCurrentFBlock, '------current', FBlock, '---------FBlock', key, '------ key');
     nodeCurrentFBlock.removeNode(node); // 上一个Block 删除 node
     this.removeFBlock(nodeCurrentFBlock, FBlock);
     
@@ -171,9 +176,9 @@ class LFUCache {
   
   // 重置Key的时候，当前key在该频率下需要变为head
   resetKey(key, value) {
-    const cacheNode = this.cache[key];
+    const cacheNode = this.cache.get(key);
     cacheNode.value = value;
-    let { currentFBlock, pre, next } = cacheNode;
+    let {currentFBlock, pre, next} = cacheNode;
     if (currentFBlock.length <= 1 || cacheNode === currentFBlock.head) {
       return;
     }
@@ -220,8 +225,8 @@ class LFUCache {
   }
   
   evict() {
-    // console.log(this.tail);
-    Reflect.deleteProperty(this.cache, this.tail.tail.key);
+    // Reflect.deleteProperty(this.cache, this.tail.tail.key);
+    this.cache.delete(this.tail.tail.key);
     this.tail.removeNode(this.tail.tail);
     if (this.tail.length === 0) {
       const next = this.tail.next;
@@ -232,7 +237,6 @@ class LFUCache {
     this.length -= 1;
   }
 }
-
 module.exports = LFUCache;
 /*
 
