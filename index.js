@@ -24,7 +24,6 @@ class FrequencyBlock {
     node.pre = node.next = null;
     
     if (this.length === 0) { // 该频率下还没有node
-      this.nodeMap.set(node.key, node);
       this.head = this.tail = node;
     } else {
       const preNode = this.head;
@@ -34,8 +33,9 @@ class FrequencyBlock {
       if (!preNode.pre) {
         this.tail = preNode;
       }
-      this.nodeMap.set(node.key, node);
     }
+    
+    this.nodeMap.set(node.key, node);
     this.length += 1;
   }
   
