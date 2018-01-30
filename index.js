@@ -94,20 +94,17 @@ class LFUCache {
       this.evict();
     }
     
-    // put第一个
-    if (this.length === 0) {
+    // 有tail且是最后一个
+    if (this.tail && this.tail.frequency === 0) {
+      node = new Node(key, value, this.tail);
+      this.tail.addNode(node);
+    } else {
       const FBlock = new FrequencyBlock(0);
       node = new Node(key, value, FBlock);
       FBlock.addNode(node);
-      this.head = this.tail = FBlock;
-    } else { // 已经有了
-      if (this.tail.frequency === 0) {
-        node = new Node(key, value, this.tail);
-        this.tail.addNode(node);
-      } else {
-        const FBlock = new FrequencyBlock(0);
-        node = new Node(key, value, FBlock);
-        FBlock.addNode(node);
+      if (this.length === 0) { // 没有tail
+        this.head = this.tail = FBlock;
+      } else { // 有tail, 但是频率不等于0
         if (this.tail === this.head) {
           this.head.pre = FBlock;
           FBlock.next = this.head;
