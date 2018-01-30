@@ -103,17 +103,12 @@ class LFUCache {
       node = new Node(key, value, FBlock);
       FBlock.addNode(node);
       if (this.length === 0) { // 没有tail
-        this.head = this.tail = FBlock;
+        this.head = FBlock;
       } else { // 有tail, 但是频率不等于0
-        if (this.tail === this.head) {
-          this.head.pre = FBlock;
-          FBlock.next = this.head;
-        } else { // Block1 -> Block2 -> Block3 -> Block4
-          FBlock.next = this.tail;
-          this.tail.pre = FBlock;
-        }
-        this.tail = FBlock;
+        FBlock.next = this.tail;
+        this.tail.pre = FBlock;
       }
+      this.tail = FBlock;
     }
     
     this.cache.set(key, node);
